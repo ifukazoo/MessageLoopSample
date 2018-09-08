@@ -7,9 +7,10 @@ namespace MessageLoopSample
 {
     public class ActionLooper : IDisposable
     {
+        public static readonly int WmClose = 0x0010;/*WM_Close*/
+        private const int WmAction = 0x8000 /*WM_APP*/ + 1;
+
         private Window window = new Window();
-        private const int WmAction = 0x8000/*WM_APP*/ + 1;
-        private const int WmExit = 0x8000/*  WM_APP*/ + 2;
 
         private ConcurrentDictionary<int, Action> userActions = new ConcurrentDictionary<int, Action>();
         private int actionId;
@@ -36,7 +37,6 @@ namespace MessageLoopSample
                     };
                     window.CreateHandle(cp);
                     window.RegisterHandler(WmAction, handleWmAction);
-                    window.RegisterHandler(WmExit, (ref Message m) => Application.ExitThread());
                     Handle = window.Handle;
 
                     Alive = true;
@@ -53,7 +53,7 @@ namespace MessageLoopSample
 
         public void Quit()
         {
-            Win32.SendMessage(Handle, WmExit, IntPtr.Zero, IntPtr.Zero);
+            Win32.SendMessage(Handle, WmClose, IntPtr.Zero, IntPtr.Zero);
         }
 
         public void SendAction(Action action)
@@ -67,7 +67,7 @@ namespace MessageLoopSample
 
         public void RegisterOnMsg(int wm, OnMessage handler)
         {
-            if (wm == WmAction || wm == WmExit) throw new ArgumentException();
+            if (wm == WmAction) throw new ArgumentException();
 
             window.RegisterHandler(wm, handler);
         }
@@ -117,7 +117,11 @@ namespace MessageLoopSample
 
         protected override void WndProc(ref Message m)
         {
-            if (handlers.TryGetValue(m.Msg, out OnMessage handler))
+            if (m.Msg == ActionLooper.WmClose)
+            {
+                Application.ExitThread();
+            }
+            else if (handlers.TryGetValue(m.Msg, out OnMessage handler))
             {
                 handler.Invoke(ref m);
             }
