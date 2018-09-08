@@ -62,7 +62,6 @@ namespace MessageLoopSample
             userActions[id] = action;
             Win32.SendMessage(Handle, WmAction, new IntPtr(id), IntPtr.Zero);
         }
-        public bool Busy => window.Busy;
         public bool Alive { get; private set; } = false;
         public IntPtr Handle { get; private set; }
 
@@ -106,8 +105,6 @@ namespace MessageLoopSample
     class Window : NativeWindow, IDisposable
     {
         private ConcurrentDictionary<int, OnMessage> handlers = new ConcurrentDictionary<int, OnMessage>();
-        private SafeBool busy = new SafeBool();
-        public bool Busy => busy.Get();
 
         internal void RegisterHandler(int wm, OnMessage handler)
         {
@@ -120,8 +117,6 @@ namespace MessageLoopSample
 
         protected override void WndProc(ref Message m)
         {
-            busy.Set(true);
-
             if (handlers.TryGetValue(m.Msg, out OnMessage handler))
             {
                 handler.Invoke(ref m);
@@ -130,8 +125,6 @@ namespace MessageLoopSample
             {
                 base.WndProc(ref m);
             }
-
-            busy.Set(false);
         }
 
         public void Dispose()

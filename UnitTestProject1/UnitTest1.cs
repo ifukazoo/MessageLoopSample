@@ -93,25 +93,6 @@ namespace UnitTestProject1
             Assert.AreEqual(false, testvalue);
         }
         [TestMethod]
-        public void TestMethod8()
-        {
-            looper.Loop();
-            Assert.AreEqual(false, looper.Busy);
-            bool busy = false;
-            new Thread(() =>
-            {
-                Thread.Sleep(100);
-                busy = looper.Busy;
-
-            }).Start();
-            looper.SendAction(() =>
-            {
-                Thread.Sleep(200);
-            });
-            Assert.AreEqual(true, busy);
-            Assert.AreEqual(false, looper.Busy);
-        }
-        [TestMethod]
         public void TestMethod9()
         {
             const int WM_TEST = 0x8000 + 3;
