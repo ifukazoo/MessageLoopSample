@@ -1,5 +1,8 @@
-﻿using System;
+﻿using com.yamanobori_old;
+using System;
+using System.Runtime.InteropServices;
 using System.Threading;
+using System.Windows.Forms;
 
 namespace MessageLoopSample
 {
@@ -7,30 +10,52 @@ namespace MessageLoopSample
     {
         static void Main(string[] args)
         {
-            using (var looper = new ActionLooper())
+            const int MSG1 = 0x8001;
+            const int MSG2 = 0x8002;
+            Action<Message> action = (msg) =>
             {
-                looper.Loop();
-                int n = 0;
-                bool ok = true;
-                for (var i = 0; i < 100; i++)
+                var s = Marshal.PtrToStringAnsi(msg.WParam);
+                Console.WriteLine($"Thread[{Thread.CurrentThread.ManagedThreadId}] received message.[{s}]");
+                Marshal.FreeHGlobal(msg.WParam);
+            };
+
+            Console.WriteLine("Message Loop Start.");
+            using (var looper1 = new MessageLooper())
+            using (var looper2 = new MessageLooper())
+            {
+                looper1.RegisterHandler((ref Message msg) => { if (msg.Msg == MSG1) action.Invoke(msg); });
+                looper2.RegisterHandler((ref Message msg) => { if (msg.Msg == MSG2) action.Invoke(msg); });
+                looper1.Loop();
+                looper2.Loop();
+
+                for (; ; )
                 {
-                    var t = new Thread(() =>
+                    var input = Console.ReadLine();
+                    input = input.Trim();
+                    if (input.Length == 0) continue;
+                    if (input.ToUpper().StartsWith("Q"))
                     {
-                        while (ok)
-                        {
-                            Thread.Sleep(1);
-                            looper.SendAction(() =>
-                            {
-                                n++;
-                                Console.WriteLine(n);
-                            });
-                        }
-                    });
-                    t.Start();
+                        looper1.Quit();
+                        looper2.Quit();
+                        while (looper1.Alive || looper2.Alive)
+                            ;
+                        break;
+                    }
+
+                    var naPtr = Marshal.StringToHGlobalAnsi(input);
+
+                    if (Char.IsLower(input[0]))
+                    {
+                        Win32.SendMessage(looper1.Handle, MSG1, naPtr, IntPtr.Zero);
+                    }
+                    else
+                    {
+                        Win32.SendMessage(looper2.Handle, MSG2, naPtr, IntPtr.Zero);
+                    }
                 }
-                Console.ReadLine();
-                ok = false;
             }
+            Console.WriteLine("Message Loop End. Hit any key...");
+            Console.ReadKey();
         }
     }
 }

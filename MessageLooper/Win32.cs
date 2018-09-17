@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Runtime.InteropServices;
 
-namespace MessageLoopSample
+namespace com.yamanobori_old
 {
     public static class Win32
     {
